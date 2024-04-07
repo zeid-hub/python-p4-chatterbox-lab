@@ -14,13 +14,59 @@ migrate = Migrate(app, db)
 
 db.init_app(app)
 
+@app.route("/")
+def index():
+    return "<h1>Welcome to my Chatterbox</h1>"
+
 @app.route('/messages')
 def messages():
-    return ''
+    my_messages = Message.query.order_by(Message.created_at.asc()).all()
 
-@app.route('/messages/<int:id>')
+    message_list = []
+
+    for message in my_messages:
+        message_list.append(message.to_dict())
+
+    response = make_response(
+        message_list,
+        200
+    )
+
+    return response
+
+@app.route("/messages", methods=["POST"])
+def create_message():
+    data = request.get_json()
+    
+    new_message = Message(body=data['body'], username=data['username'])
+    db.session.add(new_message)
+    db.session.commit()
+
+    return make_response(
+        new_message.to_dict(),
+        200
+    )
+
+@app.route('/messages/<int:id>', methods=["PATCH"])
 def messages_by_id(id):
-    return ''
+    message = Message.query.filter(Message.id == id).first()
+    data = request.get_json()
+    message.body = data['body']
+    db.session.commit()
+    return make_response(
+        message.to_dict(),
+         200
+    )
+
+@app.route('/messages/<int:id>', methods=['DELETE'])
+def delete_message(id):
+    message = Message.query.filter(Message.id == id).first()
+    db.session.delete(message)
+    db.session.commit()
+    return make_response(
+        {"message": "Message deleted successfully"},
+        200
+        )
 
 if __name__ == '__main__':
     app.run(port=5555)
